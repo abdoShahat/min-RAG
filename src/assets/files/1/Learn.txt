@@ -1,0 +1,437 @@
+@@ Chapter1
+
+## What we'll learn ?
+- Text Classification 
+- Text Generation 
+- Encoding 
+- Deep Learning models for text 
+- Transformer architecture 
+- Protecting models 
+
+## Use case:
+- Sentiment analysis
+- Text Summarization 
+- Machine Translation 
+
+## Text Processing Pipeline 
+1- Raw Data 
+2- Preprocessing 
+3- Encoding 
+4- Dataset&Dataloader 
+
+
+## Preprocessing Techniques
+- Tokenization 
+- Stop word removal 
+- Stemming 
+- Rare word removal 
+
+## Tokenization
+- Tokens or words extracted from text 
+- Tokenization using torchtext 
+from torchtext.data.utils import get_tokenizer 
+tokenizer = get_tokenizer("basic_english")
+tokens = tokenizer("I am reading a book now. I love to read books!")
+
+## Stop word removal 
+- Eliminate common words that do not contribute to the meaning 
+- Stop words like 'a', 'and'
+
+import nltk 
+nltk.download('stopwords')
+from nltk.corpus import stopwords
+stop_words = set(stopwords.words('english'))
+tokens = ["I", "am", "reading", "a", "book", "now", ".", "I", "love", "to", "read", 
+"books", "!"] 
+
+
+## Stemming 
+- Reducing words to their base form 
+import nltk 
+from nltk.stem import PorterStremmer 
+steemer = PorterStremmer()
+filtered_tokens = ["reading", "book", ".", "love", "read", "books", "!"] 
+stemmed_tokens = [stemmer.stem(token) for token in filtered_tokens]
+
+## Rare word removal 
+- Removing infrequent words that not add value 
+from nltk.probability import FreqDist
+stemmed_tokens= ["read", "book", ".", "love", "read", "book", "!"] 
+freq_dist = FreqDist(stemmed_tokens)
+threshold = 2
+common_tokens = [token for token in stemmed_tokens if freq_dist[token] > threshold]
+
+
+## Preprocessing Techniques 
+- Reducing features 
+- Cleaner, more representive datasets
+
+
+## Encoding Text Data
+- Text encoding 
+	* Convert text into machine readable numbers 
+	* Enable analysis and modeling 
+- Ex: Human readable Pet[cat,dog,fish]
+	: Machine readable cat[1,0,0] , dog[0,1,0] fish[0,0,1]
+
+## Encoding Techniques
+- one-hot-encoding : transform word into unique numerical representations
+- Bag-of-Words(BOW): capture word frequency, disregarding order 
+- TF-IDF: balances uniqueness and importance 
+- Embedding : convert word into vectors, capturing semantic meaning 
+
+
+## One-hot-encoding with pytorch 
+import torch
+vocab = ['cat','dog','fish']
+vocab_size= len(vocab)
+one_hot_vector = torch.eye(vocab_size)
+one_hot_dict = {word:one_hot_vector[i] for i,word in enumerate(vocab)}
+print(one_hot_dict)  
+
+
+
+## Text preprocessing pipeline 
+
+from torch.utils.data import Dataset, DataLoader
+from sklearn.feature_extraction.text import CountVectorizer
+
+
+def preprocess_sentence(sentences):
+    processed_sentences = []
+    for sentence in sentences:
+        sentence = sentence.lower()   # 1. make all lower characters
+        tokens = tokinizer(sentence)  # 2. tokens
+        tokens = [ token for token in tokens if token not in stop_words] # 3. remove stop words
+        tokens = [ stemmer.stem(token) for token in tokens] # 4. stemming 
+        processed_sentences.append(' '.join(tokens))
+    return processed_sentences
+
+class TextDataset(Dataset):
+    def __init__(self,data):
+        self.data =data
+    def __len__(self):
+        return len(self.data)
+    def __getitem__(self,idx):
+        return self.data[idx]
+    
+def encode_sentences(sentences):
+    victorizer = CountVectorizer()
+    x = victorizer.fit_transform(sentences)
+    return x.toarray(),victorizer.get_feature_names_out()
+
+def text_processing_pipeline(sentences):
+    process_sentence = preprocess_sentence(sentences) # [1.lowercase 2.tokenizer 3.stopwords 4.stemming]
+    encoded_sentence,victorizer = encode_sentences(process_sentence) # 1.Bag of Wards
+    dataset = TextDataset(encoded_sentence) # create dataset  
+    dataloader = DataLoader(dataset,batch_size=2,shuffle=True) # put it in dataloader
+    return dataloader,victorizer
+
+data,vict = text_processing_pipeline(shaksper)
+print(next(iter(data))[0,:10] , vict[:10])
+
+#--------------------------------------------------------#
+#--------------------------------------------------------#
+
+@@ Chapter2
+
+## what are the word embeddings?
+- Previous encoding techniques are a good for a first step
+	* often create too many features and can't identify the similar words 
+- Word embedding map words to numerical vectors
+- Example of semantic relationships
+	* king and queen
+	* man and women
+
+## Word embedding in pytorch 
+import torch 
+from torch import nn 
+
+words = ["The", "cat", "sat", "on", "the", "mat"]
+words_to_idx = {word:i for i,word in enumerate(words)}
+print(f"words_to_idx is : {words_to_idx}")
+
+inputs = torch.LongTensor([words_to_idx[w] for w in words])
+print(f"inputs is : {inputs}")
+
+embedding =  nn.Embedding(num_embeddings=len(words),embedding_dim=10)
+print(f"embedding is : {embedding}")
+
+output = embedding(inputs)
+print(f"output is : {output}")
+
+
+
+## Convolution operations
+- Sliding a filter (kernal) over the input data 
+- For each position of the filter perform element wise calculations 
+- For text: learn structure and meaning of words 
+
+
+## Filters and stride in CNN 
+- Filter:
+	* Small matrix that we slide over the input 
+- Stride:
+	* Number of positions the filter moves
+	
+## CNN architecture for text:
+1- Convolutional layer
+	* Applies filter to input data 
+2- Pooling layer 
+	* Reduce data size while preserving important information
+3- Fully Connected Layer 
+	* Makes final predictions based on the previous	layer output
+
+
+
+
+1- content generations cashed on s3 new bransh 
+2- api combine top 3 ranked and BFS and voted between them 
+
+
+## RNNs for Text
+- Handle sequences of varying length 
+- Mentain an internal short-term memory 
+- CNN spot patterns in chunks 
+- RNNs remember past word for greater meaning 	
+
+## Why using RNNs for text classification 
+- RNNs can read the sentence like a human, one word at a time 
+- Understand context and orders
+
+
+## Recab for implementing dataset and dataloader 
+
+from torch.utils.data import Dataset,DataLoader
+
+class TextClssification(Dataset):
+	def __init__(self,text):
+		self.text = text
+	
+	def __len__(self):
+		return len(self.text)
+	
+	def __getitem__(self,idx):
+		return self.text[idx]
+
+
+## RNN Variation : LSTM
+- Long Short-Term Memory can capture complexity where RNNs my struggle
+
+- LSTM Architecture: 
+	* Input  Gate 
+	* Forget Gate
+	* Output Gate
+
+class LSTMMODEL(nn.Module):
+	def __init__(self,input_size,hidden_size,output_size):
+		super(LSTMMODEL,self).__init__()
+		self.lstm = nn.LSTM(input_size,hidden_size,batch_first=True)
+		self.fc = nn.Linear(hidden_size,output_size)
+		
+	def forward(self,x):
+		_,(hidden,_) = self.lstm(x)
+		output = self.fc(hidden.squeeze(0))
+		return output 
+		
+## RNN Variation : GRU
+- Gated Recurrent Unit can quickly recognize spammy patterns 
+  without needing the full context
+
+class GRUMODEL(nn.Module):
+	def __init__(self,input_size,hidden_size,output_size):
+		super(GRUMODEL,self).__init__()
+		self.gru = nn.GRU(input_size,hidden_size,batch_first=True)
+		self.fc = nn.Linear(hidden_size,output_size)
+	
+	def forward(self,x):
+		_,hidden = self.gru(x)
+		output = self.fc(hidden.squeeze(0))
+		return output
+		
+
+
+
+
+#--------------------------------------------------------#
+#--------------------------------------------------------#
+
+@@ Chapter3
+
+## Text Generation and NLP
+
+- key applications: chatbots, language translation, technical writing 
+- RNN, LSTM, GRU: remembering past information for better sequential data 
+- input : the cat is on the m
+- output: the cat is on the mat 
+
+
+
+
+
+## GANs and their role in text generation 
+
+- GANs can generate content that seems orignal
+	* preserve statistical similarity
+- Can replicate complex patterns unachievable by RNNs
+- Can emulate real-world pattern
+
+
+## Structure of GANs 
+
+- GANs has two components:
+	* Generator: create fake samples by adding noise 
+	* Discriminator: differentiates between real and fake data 
+	
+	
+## Building GANs model in pytorch 
+
+class Generator(nn.Module):
+	def __init__(self):
+		super().__init__()
+		self.model = nn.Sequential(
+								nn.Linear(seq_length,seq_length),
+								nn.Sigmoid()
+								)
+								
+	def forward(self,x):
+		return self.model(x)
+		
+
+class Discriminator(nn.Module):
+	def __init__(self):
+		super().__init__()
+		self.model = nn.Sequential(
+								nn.Linear(seq_length,1),
+								nn.Sigmoid()
+								)
+								
+	def forward(self,x):
+		return self.model(x)
+		
+		
+
+## Pretrained models for text generation
+
+## Why Pretrained Model?
+- Benefits:
+	* Trained on extensive dataset
+	* High performance across various text generation tasks
+		- Sentiment analysis
+		- Text completion
+		- Language translation
+		
+- Limitations:
+	* High computational cost for training 
+	* Large storage requirements
+	* Limited customization options
+
+
+## Understanding GPT-2 Tokenizer and Model
+- GPT2LMHeadModel:
+	* HuggingFace's take on GPT-2
+	* Tailored for text generation
+- GPT2Tokenizer:
+	* Convert text into tokens
+	* Handleds subword tokenization : larger become [large,r]
+
+
+##Choosing the right pre-trained model
+- GPT-2: Text generation
+- DistilGPT-2 (Smaller version of GPT-2): Text generation
+- BERT: Text classification, question-answering
+- T5 (t5-small is the smaller version of T5): Language translation, summarization
+
+
+## Evaluation metrics for text generation
+- Standard accuracy metrics such as accuracy,F1 fall short for these tasks
+- BLEU and ROUGH
+
+## BLEU ( Bilingual Evaluation Understudy )
+- Compare generated text and reference text 
+- Check of occurance n-grams 
+- In the sentence "The cat is on the mat"
+	* 1-grams (uni-gram) : [the,cat,on,the,mat]
+	* 2-grams (bi-gram)  : [the cat, cat is, is on, on the, the mat]
+	* and so on for n-grams
+	
+## ROUGE ( Recall Oriented Understudy for Gisting Evaluation )
+- Compare generated text and reference text in two ways
+- ROUGE-N: Considers overlapping n-grams(n=1 uni-gram, n=2 bi-gram) for both text 
+- ROUGE-L: Looks at the longest common subsequence (LCS) between texts
+- ROUGE Metrics:
+	* F-measure: Harmonic mean of precision and recall 
+	* Precision: Matches of n-grams in generated text within the reference text
+	* Recall: Matches of n-grams in reference within the generated text 
+-rouge1, rouge2 and roug3 refer to 1-gram, 2-gram, LCS respectively
+
+## Considerations and limitations
+- Evaluate word presence, not semantic understanding
+- Sensitive to 	the length of the generated text 
+- Quality of referene text affects the score 
+
+
+#--------------------------------------------------------#
+#--------------------------------------------------------#
+
+@@ Chapter4
+
+## what is transfer learning ?
+- Using pre-existing knowledge from one task to a related task 
+- Save a time 
+- Share expertise 
+- Reduce need for large data 
+
+## Mechanics of transfer learning?
+1- Pretrained model ( text translation ) 
+2- Transfer learning --> Fine tuning 
+3- New Model for ( Sentiment Analysis )
+
+
+## Pretrained model : BERT
+- Bidirectional Encoder Representaion from Transformers
+- Trained for language modeling 
+- Multiple layers of transforms
+- Pretrained on large text
+
+## Example:
+texts = ["I love this!",  
+         "This is terrible.",  
+         "Amazing experience!",  
+         "Not my cup of tea."] 
+
+labels = [1, 0, 1, 0]  
+
+import torch 
+from transforms import BertTokenizer, BertForSequenceClassification
+
+tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
+model = BertForSequenceClassification.from_pretrained('bert-base-uncased',
+													  num_labels=2)
+													  
+inputs = tokenizer(texts,padding=True,truncation=True,return_tensor='pt',max_length=32)
+inputs['labels'] = torch.tensor(labels)
+
+
+
+## Why use transformers for text processing?
+- Speed
+- Understand the relationship between words regadless of distance
+- Human-like response
+
+## Component of transformers:
+- Encoder: Process for input data
+- Decoder: Reconstruct the output 
+- Fee-Forward Neural Network: Refine Understanding
+- Positional Encoding: Ensure order matters
+- Mult-Head Attention: Captures multiple inputs or sentiment
+
+
+## Attention mechanisms for text generation
+- Self and multi-head attention
+	* Self-Attention: Assgins significance to words within a sentence 
+		- The cat, which was in the roof, was scared 
+		- Linked "was scared" to "the cat"
+	* Multi-Head Attention: like having multiple spotlight, capturing different facets
+		- Understanding "was scared" can relate to 
+		- "the cat" , "the roof" or "was on"
